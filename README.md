@@ -3,6 +3,8 @@
 - Utilize the https://knowledge.udacity.com/ forum to seek help on content-specific issues.
 - Submit a support ticket along with the link to your forked repository if (learners are) blocked for other reasons. You can find the link to file a support ticket in your classroom home. 
 
+this is some demo change
+
 # ND9990 cloud-developer
 Content for Udacity's cloud developer nanodegree's following two courses:
 * Course 02 - Full Stack Apps on AWS
