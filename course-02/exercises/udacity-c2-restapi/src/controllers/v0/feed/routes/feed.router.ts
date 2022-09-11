@@ -29,12 +29,26 @@ router.get('/:id', async (req: Request, res: Response ) => {
 });
 
 // update a specific resource
-router.patch('/:id', 
-    requireAuth, 
+router.patch('/:id',
+    requireAuth,
     async (req: Request, res: Response) => {
-        //@TODO try it yourself
-        res.status(500).send("not implemented")
-});
+        let { id } = req.params
+        console.log(`req body: ${req.body}`)
+        const caption = req.body.caption;
+        const url = req.body.url;
+        console.log(`caption and url: ${caption}, ${url}`)
+        const item = await FeedItem.findByPk(id)
+
+        if (item) {
+            item.caption = caption
+            item.url = url
+            const savedItem = item.save()
+            console.log(item)
+            return res.status(201).send(savedItem)
+        } else {
+            res.status(404).send("Item not found")
+        }
+    });
 
 
 // Get a signed url to put a new item in the bucket
