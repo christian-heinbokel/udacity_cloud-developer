@@ -1,34 +1,14 @@
 import 'source-map-support/register'
-
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
 import { cors, httpErrorHandler } from 'middy/middlewares'
-// import { generateUploadUrl } from '../../helpers/todos'
 import * as uuid from 'uuid'
 import { createLogger } from '../../utils/logger'
-// import * as AWS from 'aws-sdk'j
-// import * as AWSXRay from 'aws-xray-sdk'
 import { setAttachmentUrl } from '../../helpers/todos'
 import { AttachmentUtils } from '../../helpers/attachmentUtils'
 
 const logger = createLogger('generateUploadUrl')
 const attachmentUtils = new AttachmentUtils()
-
-// const XAWS = AWSXRay.captureAWS(AWS)
-
-// let options: AWS.S3.Types.ClientConfiguration = {
-//   signatureVersion: 'v4'
-// }
-
-// if (process.env.IS_OFFLINE) {
-//   options = {
-//     ...options,
-//     s3ForcePathStyle: true,
-//     endpoint: 'http://localhost:4569'
-//   }
-// }
-
-// const s3 = new XAWS.S3(options)
 
 const bucketName = process.env.ATTACHMENTS_S3_BUCKET
 

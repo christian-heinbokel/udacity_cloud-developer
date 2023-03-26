@@ -78,17 +78,3 @@ export async function setAttachmentUrl(
   logger.info('Setting attachment url for a todo item', todoItem)
   await todosAccess.updateTodoAttachmentUrl(todoId, userId, attachmentUrl)
 }
-
-// export async function generateUploadUrl(
-//   todoId: string,
-//   jwtToken: string
-// ): Promise<string> {
-//   const userId = parseUserId(jwtToken)
-//   const todoItem = await todosAccess.getTodoItem(todoId, userId)
-//   if (!todoItem) {
-//     throw new createError.NotFound(`Todo item with id ${todoId} not found`)
-//   }
-//   const uploadUrl = attachmentUtils.getUploadUrl(todoId)
-//   logger.info(`Generating upload url for a todo item ${todoItem}: ${uploadUrl}`)
-//   return uploadUrl
-// }
