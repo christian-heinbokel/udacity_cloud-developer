@@ -1,44 +1,43 @@
 org: lheinbokel
 app: serverless-todo-app
 service: serverless-todo-app
+frameworkVersion: "3"
 
 plugins:
   - serverless-webpack
-  - serverless-reqvalidator-plugin
-  - serverless-aws-documentation
-  # - serverless-plugin-canary-deployments
   - serverless-iam-roles-per-function
+  - serverless-plugin-tracing
   - serverless-dynamodb-local
   - serverless-offline
-
-# Uncomment to enable individual packaging
-package:
-  individually: true
 
 provider:
   name: aws
   runtime: nodejs12.x
 
-  cors:
-    origins:
-      - "*"
-    headers:
-      - Content-Type
-    allowCredentials: false
-
   stage: ${opt:stage, 'dev'}
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'eu-central-1'}
+  profile: serverless
 
   tracing:
     lambda: true
     apiGateway: true
 
+  # Use these variables in the functions and resouorces section below. For example,
+  # ${self:provider.environment.ATTACHMENT_S3_BUCKET}
   environment:
-    TODOS_TABLE: Groups-${self:provider.stage}
+    TODOS_TABLE: Todos-${self:provider.stage}
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
-    TODO_ID_INDEX: TodoIdIndex
+    INDEX_NAME: TodoIdIndex
     ATTACHMENT_S3_BUCKET: lenno-todobucket-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
+
+  logs:
+    # Enable API Gateway logs
+    # restApi: true
+    restApi:
+      accessLogging: true
+      executionLogging: true
+      fullExecutionData: true
 
   iamRoleStatements:
     - Effect: Allow
@@ -49,27 +48,29 @@ provider:
 
 custom:
   serverless-offline:
-    port: 3003
+    httpPort: 3003
 
   dynamodb:
     start:
       port: 8000
       inMemory: true
       migrate: true
+      # seed: true
 
   documentation:
     api:
       info:
-        version: v1.0.0
-        title: Udagram API
-        description: Serverless TODO list api
-    # models:
-    #   - name: GroupRequest
-    #     contentType: application/json
-    #     schema: ${file(models/create-group-request.json)}
-    #   - name: ImageRequest
-    #     contentType: application/json
-    #     schema: ${file(models/create-image-request.json)}
+        version: 1.0.0
+        title: Serverless TODO App
+        description: This is a simple TODO app built with Serverless Framework
+      servers:
+        - url: http://localhost:3003/dev
+          description: Local server
+        - url: https://<api-id>.execute-api.<region>.amazonaws.com/dev
+          description: AWS server
+      tags:
+        - name: todos
+          description: Todos management
 
 functions:
   Auth:
@@ -110,27 +111,7 @@ functions:
           - dynamodb:PutItem
         Resource: !GetAtt TodosTable.Arn
 
-    # Provide property for setting up CORS, Authorizer, iamRoleStatements
-  DeleteTodo:
-    handler: src/lambda/http/deleteTodo.handler
-    events:
-      - http:
-          method: delete
-          path: todos/{todoId}
-          cors: true
-          authorizer: Auth
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:DeleteItem
-        Resource: !GetAtt TodosTable.Arn
-      # allow to query the table for the todo item using the index
-      - Effect: Allow
-        Action:
-          - dynamodb:Query
-        Resource: !GetAtt TodosTable.Arn
-
-    # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
     events:
@@ -149,6 +130,26 @@ functions:
         Resource: !GetAtt TodosTable.Arn
         # allow to query the table for the todo item using the index
         # DONE: L: Check if this is necessary - the other implementation is slighly different
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: !GetAtt TodosTable.Arn
+
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements
+  DeleteTodo:
+    handler: src/lambda/http/deleteTodo.handler
+    events:
+      - http:
+          method: delete
+          path: todos/{todoId}
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: !GetAtt TodosTable.Arn
+      # allow to query the table for the todo item using the index
       - Effect: Allow
         Action:
           - dynamodb:Query
@@ -176,41 +177,42 @@ functions:
 
 resources:
   Resources:
-    GatewayResponseDefault4XX:
-      Type: AWS::ApiGateway::GatewayResponse
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
-        ResponseType: DEFAULT_4XX
-        RestApiId:
-          Ref: ApiGatewayRestApi
-
     TodosTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: todoId
-            AttributeType: S
         KeySchema:
           - AttributeName: userId
             KeyType: HASH
           - AttributeName: todoId
             KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: todoId
+            AttributeType: S
+
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE}
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TODOS_CREATED_AT_INDEX}
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
 
-    RequestBodyValidator:
-      Type: AWS::ApiGateway::RequestValidator
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
       Properties:
-        Name: "request-body-validator"
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
         RestApiId:
           Ref: ApiGatewayRestApi
-        ValidateRequestBody: true
-        ValidateRequestParameters: false
 
     # Do not forget to add the CorsConfiguration propoerty
     AttachmentsBucket:
@@ -237,7 +239,7 @@ resources:
       Properties:
         PolicyDocument:
           Id: AttachmentBucketPolicy
-          Version: "2012-10-17"
+          Version: 2012-10-17
           Statement:
             - Sid: PublicReadForGetBucketObjects
               Effect: Allow
@@ -247,40 +249,3 @@ resources:
               Resource:
                 - "arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*"
         Bucket: !Ref AttachmentsBucket
-
-    # AttachmentsBucket:
-    #   Type: AWS::S3::Bucket
-    #   DependsOn: SNSTopicPolicy
-    #   Properties:
-    #     BucketName: ${self:provider.environment.IMAGES_S3_BUCKET}
-    #     NotificationConfiguration:
-    #       TopicConfigurations:
-    #         - Event: s3:ObjectCreated:Put
-    #           Topic: !Ref ImagesTopic
-    #     CorsConfiguration:
-    #       CorsRules:
-    #         - AllowedOrigins:
-    #             - "*"
-    #           AllowedHeaders:
-    #             - "*"
-    #           AllowedMethods:
-    #             - GET
-    #             - PUT
-    #             - POST
-    #             - DELETE
-    #             - HEAD
-    #           MaxAge: 3000
-
-    # BucketPolicy:
-    #   Type: AWS::S3::BucketPolicy
-    #   Properties:
-    #     PolicyDocument:
-    #       Id: MyPolicy
-    #       Version: "2012-10-17"
-    #       Statement:
-    #         - Sid: PublicReadForGetBucketObjects
-    #           Effect: Allow
-    #           Principal: "*"
-    #           Action: "s3:GetObject"
-    #           Resource: "arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*"
-    #     Bucket: !Ref AttachmentsBucket

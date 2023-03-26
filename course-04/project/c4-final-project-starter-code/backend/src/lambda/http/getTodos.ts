@@ -20,6 +20,12 @@ export const handler = middy(
 
     return {
       statusCode: 200,
+      // CORS headers
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
+
       body: JSON.stringify({
         items: todos
       })
