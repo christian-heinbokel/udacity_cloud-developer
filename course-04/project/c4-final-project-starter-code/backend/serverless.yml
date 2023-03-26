@@ -19,13 +19,6 @@ provider:
   name: aws
   runtime: nodejs12.x
 
-  cors:
-    origins:
-      - "*"
-    headers:
-      - Content-Type
-    allowCredentials: false
-
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 
