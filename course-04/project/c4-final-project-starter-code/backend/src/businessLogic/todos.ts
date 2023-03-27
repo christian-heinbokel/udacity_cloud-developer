@@ -1,5 +1,4 @@
 import { TodosAccess } from '../persistenceLayer/todosAcess'
-// import { AttachmentUtils } from '../helpers/attachmentUtils'
 import { TodoItem } from '../models/TodoItem'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
@@ -9,7 +8,6 @@ import * as uuid from 'uuid'
 import * as createError from 'http-errors'
 
 const todosAccess = new TodosAccess()
-// const attachmentUtils = new AttachmentUtils()
 const logger = createLogger('todos')
 
 export async function getAllTodos(jwtToken: string): Promise<TodoItem[]> {
