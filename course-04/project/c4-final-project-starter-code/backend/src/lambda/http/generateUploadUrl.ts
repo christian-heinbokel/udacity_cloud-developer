@@ -1,7 +1,7 @@
 import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
-import { cors, httpErrorHandler } from 'middy/middlewares'
+import { cors } from 'middy/middlewares'
 import * as uuid from 'uuid'
 import { createLogger } from '../../utils/logger'
 import { setAttachmentUrl } from '../../helpers/todos'
@@ -10,9 +10,7 @@ import { AttachmentUtils } from '../../helpers/attachmentUtils'
 const logger = createLogger('generateUploadUrl')
 const attachmentUtils = new AttachmentUtils()
 
-const bucketName = process.env.ATTACHMENTS_S3_BUCKET
-
-function getAttachmentUrl(imageId: string): string {
+function getAttachmentUrl(bucketName: string, imageId: string): string {
   return `https://${bucketName}.s3.amazonaws.com/${imageId}`
 }
 
@@ -23,12 +21,13 @@ export const handler = middy(
     const todoId = event.pathParameters.todoId
     const authorizationHeader = event.headers.Authorization
     const jwtToken = authorizationHeader.split(' ')[1]
+
+    const bucketName = process.env.ATTACHMENT_S3_BUCKET
     const imageId = uuid.v4()
+    const newAttachmentUrl = getAttachmentUrl(bucketName, imageId)
 
-    // set the attachmentUrl for a TODO item
-    setAttachmentUrl(todoId, getAttachmentUrl(imageId), jwtToken)
-
-    const presignedUrl = attachmentUtils.getPresignedAttachmentUrl(todoId)
+    setAttachmentUrl(todoId, newAttachmentUrl, jwtToken)
+    const presignedUrl = attachmentUtils.getPresignedAttachmentUrl(imageId)
 
     return {
       statusCode: 201,
@@ -40,7 +39,7 @@ export const handler = middy(
   }
 )
 
-handler.use(httpErrorHandler()).use(
+handler.use(
   cors({
     credentials: true
   })
