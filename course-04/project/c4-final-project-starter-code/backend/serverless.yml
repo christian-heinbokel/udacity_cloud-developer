@@ -82,6 +82,10 @@ functions:
         Action:
           - dynamodb:Query
         Resource: !GetAtt TodosTable.Arn
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource: !GetAtt AttachmentsBucket.Arn
 
   # Provide iamRoleStatements property. Decide the Actions and AWS Resource.
   # To refer to an AWS resource defined in the "Resources" section, you can use "Resource: !GetAtt <resource-name>.Arn"
@@ -116,11 +120,8 @@ functions:
       - Effect: Allow
         Action:
           - dynamodb:DeleteItem
-        Resource: !GetAtt TodosTable.Arn
-      # allow to query the table for the todo item using the index
-      - Effect: Allow
-        Action:
           - dynamodb:Query
+          - dynamodb:GetItem
         Resource: !GetAtt TodosTable.Arn
 
     # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
@@ -139,11 +140,7 @@ functions:
       - Effect: Allow
         Action:
           - dynamodb:UpdateItem
-        Resource: !GetAtt TodosTable.Arn
-        # allow to query the table for the todo item using the index
-        # DONE: L: Check if this is necessary - the other implementation is slighly different
-      - Effect: Allow
-        Action:
+          - dynamodb:GetItem
           - dynamodb:Query
         Resource: !GetAtt TodosTable.Arn
 
@@ -157,15 +154,19 @@ functions:
           cors: true
           authorizer: Auth
     iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - s3:PutObject
-        Resource: !GetAtt AttachmentsBucket.Arn
-      # allow to query the table for the todo item using the index
+      # allow to query the table for the todo item
       - Effect: Allow
         Action:
           - dynamodb:Query
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
         Resource: !GetAtt TodosTable.Arn
+      # allow to put the item in the bucket
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+        Resource: !Sub arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*
 
 resources:
   Resources:
