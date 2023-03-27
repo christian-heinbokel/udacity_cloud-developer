@@ -4,7 +4,7 @@ import * as middy from 'middy'
 import { cors } from 'middy/middlewares'
 import * as uuid from 'uuid'
 import { createLogger } from '../../utils/logger'
-import { setAttachmentUrl } from '../../helpers/todos'
+import { setAttachmentUrl } from '../../businessLogic/todos'
 import { AttachmentUtils } from '../../helpers/attachmentUtils'
 
 const logger = createLogger('generateUploadUrl')
